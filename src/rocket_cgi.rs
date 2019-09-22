@@ -6,7 +6,7 @@ use std::{
 };
 
 use flate2::read::GzDecoder;
-use log::{info, trace};
+use log::trace;
 use rocket::{
     handler::{Handler, Outcome},
     http::{Method, Status},
@@ -55,6 +55,7 @@ impl CgiScript {
         }
     }
 
+    #[allow(dead_code)]
     pub fn rank(self, rank: isize) -> Self {
         Self { rank, ..self }
     }
