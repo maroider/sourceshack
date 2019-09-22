@@ -20,7 +20,12 @@ impl GitHttpBackend {
                 "git",
                 &["http-backend"],
                 &[("GIT_PROJECT_ROOT", &project_root)],
-                methods![Get, Post],
+                &[
+                    "/<user>/<repo>/info/refs",
+                    "/<user>/<repo>/git-upload-pack",
+                    "/<user>/<repo>/git-receive-pack",
+                ],
+                methods![Get, Post, Post],
             ),
         }
     }
