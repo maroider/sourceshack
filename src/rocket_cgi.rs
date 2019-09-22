@@ -168,6 +168,8 @@ fn parse_cgi_output<'r>(req: &Request, output: &[u8]) -> Outcome<'r> {
         .position(|bytes| bytes == b"\r\n\r\n")
         .unwrap();
     let (raw_header, raw_body) = output.split_at(header_end_idx + 1);
+    // TODO: Determine if it's only git that wants a leading '\n' in the repsonse body or if this is the standard.
+    let raw_body = &raw_body[3..];
 
     // Copied from https://github.com/tomaka/rouille/blob/master/src/cgi.rs#L142-L158
     // with some modifications.
@@ -212,7 +214,7 @@ fn parse_cgi_output<'r>(req: &Request, output: &[u8]) -> Outcome<'r> {
                 .expect("Header value returned from CGI script contains invalid UTF-8"),
         );
     }
-    response.set_streamed_body(io::Cursor::new(raw_body.to_vec()));
+    response.set_sized_body(io::Cursor::new(raw_body.to_vec()));
 
     Outcome::from(req, response)
 }
