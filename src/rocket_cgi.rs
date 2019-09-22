@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     io,
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -24,13 +24,19 @@ use rocket::{
 #[derive(Clone, Debug)]
 pub struct CgiScript {
     script: ScriptCommand,
+    methods: HashSet<Method>,
     rank: isize,
 }
 
 impl CgiScript {
     const DEFAULT_RANK: isize = 10;
 
-    pub fn new(command: &str, args: &[&str], env_vars: &[(&str, &str)]) -> Self {
+    pub fn new(
+        command: &str,
+        args: &[&str],
+        env_vars: &[(&str, &str)],
+        methods: HashSet<Method>,
+    ) -> Self {
         let command = command.to_string();
         let args: Vec<_> = args.iter().map(|arg| arg.to_string()).collect();
         let env_vars: HashMap<_, _> = env_vars
@@ -44,6 +50,7 @@ impl CgiScript {
                 args,
                 env_vars,
             },
+            methods,
             rank: Self::DEFAULT_RANK,
         }
     }
@@ -51,6 +58,19 @@ impl CgiScript {
     pub fn rank(self, rank: isize) -> Self {
         Self { rank, ..self }
     }
+}
+
+#[macro_export]
+macro_rules! methods {
+    ($($method:ident),+) => {{
+        use std::collections::HashSet;
+        use rocket::http::Method::*;
+        let mut methods = HashSet::new();
+        $(
+            methods.insert($method);
+        )+
+        methods
+    }};
 }
 
 impl Handler for CgiScript {
@@ -142,8 +162,10 @@ impl Handler for CgiScript {
 
 impl Into<Vec<Route>> for CgiScript {
     fn into(self) -> Vec<Route> {
-        // TODO: Add support for methods other than GET
-        vec![Route::ranked(self.rank, Method::Get, "/<path..>", self)]
+        self.methods
+            .iter()
+            .map(|method| Route::ranked(self.rank, *method, "/<path..>", self.clone()))
+            .collect()
     }
 }
 
