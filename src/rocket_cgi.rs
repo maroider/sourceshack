@@ -15,7 +15,7 @@ use rocket::{
 
 /// # Issues
 ///
-/// * Currently can't forward username and password portions of the reuquest's URI:
+/// * Currently can't forward username and password portions of the request's URI:
 ///   [rocket#998](https://github.com/SergioBenitez/Rocket/issues/998)
 /// * Doesn't support http and https at the same time or multiple simultaneous ports:
 ///   [rocket#652](https://github.com/SergioBenitez/Rocket/issues/652)
@@ -106,6 +106,7 @@ impl Handler for CgiScript {
         cmd.env("PATH_INFO", request.uri().path())
             // FIXME: Make sure this does the correct thing.
             .env("PATH_TRANSLATED", {
+                // TODO: Make the base path a field on CgiScript.
                 let base = PathBuf::from(ensure_correct_path_separator(
                     std::env::var("SRCO2_DATA_DIR").expect("RCO2_DATA_DIR must be set"),
                 ))
