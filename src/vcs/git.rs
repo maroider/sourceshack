@@ -1,6 +1,6 @@
 use rocket::Route;
 
-use crate::rocket_cgi::CgiScript;
+use crate::{methods, rocket_cgi::CgiScript};
 
 pub struct GitHttpBackend {
     cgi_script: CgiScript,
@@ -20,6 +20,7 @@ impl GitHttpBackend {
                 "git",
                 &["http-backend"],
                 &[("GIT_PROJECT_ROOT", &project_root)],
+                methods![Get, Post],
             ),
         }
     }
