@@ -1,8 +1,22 @@
 {% extends "base" %}
-{% block title %} {{ repo_info.owner }}/{{ repo_info.name }} {% endblock title %}
+{% block title %} {{ owner }}/{{ name }} {% endblock title %}
 {% block head %}
-    {{ super() }}
+  {{ super() }}
 {% endblock head %}
 {%block body%}
-    <h1>{{ repo_info.owner }}/{{ repo_info.name }}</h1>
+  <h1>{{ owner }}/{{ name }}</h1>
+  <ul>
+    {% for entry in tree %}
+      <li>
+        {% if entry.is_file %}
+            📄
+        {% elif entry.is_dir %}
+            📁
+        {% else %}
+            ⁉
+        {% endif %}
+        {{ entry.name }}
+      </li>
+    {% endfor %}
+  </ul>
 {%endblock body%}

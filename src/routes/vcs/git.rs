@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use git2::Repository;
 use log::warn;
@@ -19,18 +19,31 @@ pub fn view_repository(owner: String, repo: String) -> Result<Template, Status> 
     ))
     .join("git_repos");
     let owner_dir = base.join(&owner);
-    let repo_dir = dbg!(owner_dir.join(&repo));
+    let repo_dir = owner_dir.join(&repo);
 
     match Repository::open_bare(repo_dir) {
-        Ok(_repository) => {
-            let mut context = HashMap::new();
-            context.insert(
-                "repo_info",
-                RepositoryInfo {
-                    owner: &owner,
-                    name: &repo,
-                },
-            );
+        Ok(repository) => {
+            let commit = repository.head().unwrap().peel_to_commit().unwrap();
+            // FIXME: Currently panics on empty repos
+            let tree: Vec<_> = commit
+                .tree()
+                .unwrap()
+                .iter()
+                .map(|entry| {
+                    let is_dir = entry.filemode() == FILE_MODE_DIR;
+                    let is_file = entry.filemode() == FILE_MODE_FILE;
+                    TreeEntry {
+                        name: entry.name().unwrap().to_string(),
+                        is_dir,
+                        is_file,
+                    }
+                })
+                .collect();
+            let context = RepositoryInfo {
+                owner: &owner,
+                name: &repo,
+                tree: tree,
+            };
             Ok(Template::render("repository", context))
         }
         Err(err) => {
@@ -49,4 +62,16 @@ pub fn view_repository(owner: String, repo: String) -> Result<Template, Status> 
 struct RepositoryInfo<'a> {
     owner: &'a str,
     name: &'a str,
+    tree: Vec<TreeEntry>,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct TreeEntry {
+    name: String,
+    is_dir: bool,
+    is_file: bool,
+}
+
+// FIXME: This is likely incorrect
+const FILE_MODE_DIR: i32 = 16384;
+const FILE_MODE_FILE: i32 = 33188;
