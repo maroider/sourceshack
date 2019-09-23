@@ -1,0 +1,8 @@
+{% extends "base" %}
+{% block title %} {{ repo_info.owner }}/{{ repo_info.name }} {% endblock title %}
+{% block head %}
+    {{ super() }}
+{% endblock head %}
+{%block body%}
+    <h1>{{ repo_info.owner }}/{{ repo_info.name }}</h1>
+{%endblock body%}
