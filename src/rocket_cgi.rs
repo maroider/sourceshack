@@ -26,6 +26,7 @@ pub struct CgiScript {
     script: ScriptCommand,
     methods: Vec<Method>,
     paths: Vec<String>,
+    path_translated: PathBuf,
     rank: isize,
 }
 
@@ -33,19 +34,24 @@ impl CgiScript {
     const DEFAULT_RANK: isize = 10;
 
     // TODO: Add the ability to specify multiple HTTP methods for a single path
-    pub fn new(
+    pub fn new<P>(
         command: &str,
         args: &[&str],
         env_vars: &[(&str, &str)],
         paths: &[&str],
         methods: Vec<Method>,
-    ) -> Self {
+        path_translated: P,
+    ) -> Self
+    where
+        P: AsRef<Path>,
+    {
         let command = command.to_string();
         let args: Vec<_> = args.iter().map(|arg| arg.to_string()).collect();
         let env_vars: HashMap<_, _> = env_vars
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect();
+        let path_translated = path_translated.as_ref().to_path_buf();
 
         Self {
             script: ScriptCommand {
@@ -53,8 +59,9 @@ impl CgiScript {
                 args,
                 env_vars,
             },
-            paths: paths.iter().map(|p| p.to_string()).collect(),
             methods,
+            paths: paths.iter().map(|p| p.to_string()).collect(),
+            path_translated,
             rank: Self::DEFAULT_RANK,
         }
     }
@@ -106,23 +113,10 @@ impl Handler for CgiScript {
 
         // FIXME: Make sure that paths behave properly when a CgiScript route is mounted
         //        somewhere other than at the root path.
+        // FIXME: Handle paths that end in .git
         cmd.env("PATH_INFO", request.uri().path())
             // FIXME: Make sure this does the correct thing.
-            .env("PATH_TRANSLATED", {
-                // TODO: Make the base path a field on CgiScript.
-                let base = PathBuf::from(ensure_correct_path_separator(
-                    std::env::var("SRCO2_DATA_DIR").expect("RCO2_DATA_DIR must be set"),
-                ))
-                .join("git_repos");
-                let path = base.join(
-                    Path::new(&ensure_correct_path_separator(
-                        request.uri().path().to_string(),
-                    ))
-                    .strip_prefix("/")
-                    .unwrap(),
-                );
-                path
-            });
+            .env("PATH_TRANSLATED", &self.path_translated);
 
         cmd.env("AUTH_TYPE", "").env("REMOTE_USER", "");
 
@@ -180,14 +174,6 @@ struct ScriptCommand {
     command: String,
     args: Vec<String>,
     env_vars: HashMap<String, String>,
-}
-
-fn ensure_correct_path_separator(string: String) -> String {
-    if std::path::MAIN_SEPARATOR != '/' {
-        string.replace("/", "\\")
-    } else {
-        string
-    }
 }
 
 fn parse_cgi_output<'r>(req: &Request, output: &[u8]) -> Outcome<'r> {

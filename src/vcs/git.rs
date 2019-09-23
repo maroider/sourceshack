@@ -26,6 +26,7 @@ impl GitHttpBackend {
                     "/<user>/<repo>/git-receive-pack",
                 ],
                 methods![Get, Post, Post],
+                "",
             ),
         }
     }
