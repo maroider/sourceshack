@@ -1,6 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-use rocket::{fairing::AdHoc, Config};
+use rocket::Config;
 use rocket_contrib::templates::Template;
 
 mod rocket_cgi;
@@ -19,8 +19,5 @@ fn main() {
         .mount("/", routes::vcs::git::routes())
         .mount("/", GitHttpBackend::new())
         .attach(Template::fairing())
-        .attach(AdHoc::on_request("print_request", |req, _data| {
-            println!("{:#?}", req)
-        }))
         .launch();
 }
