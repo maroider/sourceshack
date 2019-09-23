@@ -205,7 +205,7 @@ fn parse_cgi_output<'r>(req: &Request, output: &[u8]) -> Outcome<'r> {
         };
         let raw_value = &raw_value[2..last_value_idx];
 
-        if raw_name == "Status".as_bytes() {
+        if raw_name == b"Status" {
             status_code = std::str::from_utf8(&raw_value[0..3])
                 .expect("Value of Status contains invalid UTF-8")
                 .parse()
