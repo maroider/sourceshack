@@ -10,7 +10,7 @@ use log::trace;
 use rocket::{
     handler::{Handler, Outcome},
     http::{Method, Status},
-    Data, Request, Response, Route,
+    Config, Data, Request, Response, Route, State,
 };
 
 /// # Issues
@@ -79,19 +79,19 @@ macro_rules! methods {
 
 impl Handler for CgiScript {
     fn handle<'r>(&self, request: &'r Request, data: Data) -> Outcome<'r> {
+        let config = request.guard::<State<Config>>().unwrap();
+
         let mut cmd = Command::new(&self.script.command);
         cmd.args(&self.script.args).envs(&self.script.env_vars);
 
         // FIXME: Add more CGI environment variables and ensure the current ones are correct.
 
         cmd.env("SERVER_SOFTWARE", "rocket")
-            // FIXME:
-            .env("SERVER_NAME", "localhost")
+            .env("SERVER_NAME", config.address.to_string())
             .env("GATEWAY_INTERFACE", "CGI/1.1")
             // FIXME:
             .env("SERVER_PROTOCOL", "HTTP/1.1")
-            // FIXME:
-            .env("SERVER_PORT", "80");
+            .env("SERVER_PORT", config.port.to_string());
 
         cmd.env("REQUEST_METHOD", request.method().as_str())
             .env("QUERY_STRING", request.uri().query().unwrap_or(""))

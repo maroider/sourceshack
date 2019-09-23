@@ -1,6 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-use rocket::{fairing::AdHoc, routes};
+use rocket::{fairing::AdHoc, routes, Config};
 use rocket_contrib::templates::Template;
 
 mod rocket_cgi;
@@ -11,7 +11,9 @@ use vcs::git::GitHttpBackend;
 fn main() {
     dotenv::dotenv().ok();
 
-    rocket::ignite()
+    let config = Config::active().unwrap();
+    rocket::custom(config.clone())
+        .manage(config)
         .mount("/", routes![])
         .mount("/", GitHttpBackend::new())
         .attach(Template::fairing())
