@@ -1,7 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 use rocket::Config;
-use rocket_contrib::templates::Template;
+use rocket_contrib::{serve::StaticFiles, templates::Template};
 
 mod rocket_cgi;
 mod routes;
@@ -18,6 +18,7 @@ fn main() {
         .manage(config)
         .mount("/", routes::vcs::git::routes())
         .mount("/", GitHttpBackend::new())
+        .mount("/", StaticFiles::from("static").rank(20))
         .attach(Template::fairing())
         .launch();
 }
