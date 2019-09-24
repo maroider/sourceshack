@@ -3,7 +3,7 @@
 use rocket::Config;
 use rocket_contrib::{serve::StaticFiles, templates::Template};
 
-mod rocket_cgi;
+mod cgi;
 mod routes;
 mod util;
 mod vcs;
