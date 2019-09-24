@@ -71,7 +71,7 @@ impl<'a> CgiScript<'a> {
     builder_property!(remote_ident, &'a str);
     builder_property!(content_type, &'a str);
 
-    pub fn run<R: Read>(self, data: R) -> Result<CgiResponse, CgiScriptError> {
+    pub fn run<R: Read>(self, mut data: R) -> Result<CgiResponse, CgiScriptError> {
         let mut cmd = Command::new(&self.command);
         cmd.args(self.args).envs(
             self.env_vars
