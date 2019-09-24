@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf};
+use std::{convert::TryFrom, env, path::PathBuf};
 
 use git2::Repository;
 use log::warn;
@@ -30,16 +30,13 @@ pub fn view_repository(owner: String, repo: String) -> Result<Template, Status> 
                 .unwrap()
                 .iter()
                 .map(|entry| {
-                    let kind = {
-                        match entry.filemode() {
-                            FILE_MODE_DIR => 1,
-                            FILE_MODE_FILE => 2,
-                            _ => i8::max_value(),
-                        }
-                    };
+                    let kind = FileType::try_from(entry.filemode())
+                        .map(|fm| fm as i8)
+                        .unwrap();
                     TreeEntry {
                         name: entry.name().unwrap().to_string(),
                         kind,
+                        is_not_dir: kind != FileType::Directory as i8,
                     }
                 })
                 .collect();
@@ -73,8 +70,43 @@ struct RepositoryInfo<'a> {
 struct TreeEntry {
     name: String,
     kind: i8,
+    is_not_dir: bool,
 }
 
-// FIXME: This is likely incorrect
-const FILE_MODE_DIR: i32 = 16384;
-const FILE_MODE_FILE: i32 = 33188;
+enum FileType {
+    File = 1,
+    Directory = 2,
+    Symlink = 3,
+    Gitlink = 4,
+}
+
+impl TryFrom<i32> for FileType {
+    type Error = FileTypeError;
+
+    fn try_from(fm: i32) -> Result<Self, Self::Error> {
+        // https://unix.stackexchange.com/questions/450480/file-permission-with-six-bytes-in-git-what-does-it-mean/450488#450488
+        let ft = fm >> 12;
+        if ft ^ 0b1000 == 0 {
+            Ok(Self::File)
+        } else if ft ^ 0b0100 == 0 {
+            Ok(Self::Directory)
+        } else if ft ^ 0b1010 == 0 {
+            Ok(Self::Symlink)
+        } else if ft ^ 0b1110 == 0 {
+            Ok(Self::Gitlink)
+        } else {
+            Err(FileTypeError(fm))
+        }
+    }
+}
+
+#[derive(Debug)]
+struct FileTypeError(i32);
+
+impl std::fmt::Display for FileTypeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Invalid file type: {}", self.0)
+    }
+}
+
+impl std::error::Error for FileTypeError {}

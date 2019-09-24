@@ -1,0 +1,31 @@
+table.files {
+    background-color: whitesmoke;
+    border-color: lightblue;
+    border-radius: 2px;
+    border-style: solid;
+    border-width: 1px;
+    padding: 0px;
+}
+
+table.files tbody td {
+    border-collapse: collapse;
+    border-spacing: 0px;
+    border-top: 1px solid lightblue;
+    padding-bottom: 4px;
+    padding-top: 4px;
+    /* border-image-repeat: stretch; */
+}
+
+table.files tbody tr:first-child td {
+    border-top: none;
+}
+
+table.files tbody td.icon {
+    padding-left: 3px;
+    padding-right: 2px;
+}
+
+table.files tbody td.name {
+    padding-left: 10px;
+    padding-right: 10px;
+}
