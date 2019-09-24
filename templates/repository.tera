@@ -6,17 +6,16 @@
 {%block body%}
   <h1>{{ owner }}/{{ name }}</h1>
   <ul>
-    {% for entry in tree %}
-      <li>
-        {% if entry.is_file %}
-            📄
-        {% elif entry.is_dir %}
-            📁
-        {% else %}
-            ⁉
-        {% endif %}
-        {{ entry.name }}
-      </li>
+    {# {{ tree | sort }} #}
+    {# {{ tree | sort(attribute="is_file") }} #}
+    {% for entry in tree | filter(attribute="is_dir", value=true) %}
+      <li>📁 {{ entry.name }}</li>
+    {% endfor %}
+    {% for entry in tree | filter(attribute="is_file", value=true) %}
+      <li>📄 {{ entry.name }}</li>
+    {% endfor %}
+    {% for entry in tree | filter(attribute="is_dir", value=false) | filter(attribute="is_file", value=false) %}
+      <li>⁉ {{ entry.name }}</li>
     {% endfor %}
   </ul>
 {%endblock body%}
