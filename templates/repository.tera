@@ -6,17 +6,28 @@
 {% endblock head %}
 {%block body%}
   <h1>{{ owner }}/{{ name }}</h1>
-  <ul>
-    {# {{ tree | sort }} #}
-    {# {{ tree | sort(attribute="is_file") }} #}
-    {% for entry in tree | filter(attribute="is_dir", value=true) %}
-      <li>📁 {{ entry.name }}</li>
-    {% endfor %}
-    {% for entry in tree | filter(attribute="is_file", value=true) %}
-      <li>📄 {{ entry.name }}</li>
-    {% endfor %}
-    {% for entry in tree | filter(attribute="is_dir", value=false) | filter(attribute="is_file", value=false) %}
-      <li>⁉ {{ entry.name }}</li>
-    {% endfor %}
-  </ul>
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in tree | sort(attribute="kind") %}
+        <tr>
+          <td>
+            {% if entry.kind == 1 %}
+              📁
+            {% elif entry.kind == 2 %}
+              📄
+            {% else %}
+              ⁉
+            {% endif %}
+          </td>
+          <td>{{ entry.name }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 {%endblock body%}

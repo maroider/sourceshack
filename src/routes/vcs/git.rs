@@ -30,19 +30,23 @@ pub fn view_repository(owner: String, repo: String) -> Result<Template, Status> 
                 .unwrap()
                 .iter()
                 .map(|entry| {
-                    let is_dir = entry.filemode() == FILE_MODE_DIR;
-                    let is_file = entry.filemode() == FILE_MODE_FILE;
+                    let kind = {
+                        match entry.filemode() {
+                            FILE_MODE_DIR => 1,
+                            FILE_MODE_FILE => 2,
+                            _ => i8::max_value(),
+                        }
+                    };
                     TreeEntry {
                         name: entry.name().unwrap().to_string(),
-                        is_dir,
-                        is_file,
+                        kind,
                     }
                 })
                 .collect();
             let context = RepositoryInfo {
                 owner: &owner,
                 name: &repo,
-                tree: tree,
+                tree,
             };
             Ok(Template::render("repository", context))
         }
@@ -68,8 +72,7 @@ struct RepositoryInfo<'a> {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct TreeEntry {
     name: String,
-    is_dir: bool,
-    is_file: bool,
+    kind: i8,
 }
 
 // FIXME: This is likely incorrect
