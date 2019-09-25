@@ -5,7 +5,10 @@ use std::{
     process::{Command, Stdio},
 };
 
+pub mod auth;
 pub mod rocket;
+
+use auth::Auth;
 
 #[derive(Debug)]
 pub struct CgiScript<'a> {
@@ -21,7 +24,7 @@ pub struct CgiScript<'a> {
     remote_addr: Option<&'a str>,
     path_info: Option<&'a str>,
     path_translated: Option<&'a str>,
-    auth_type: Option<&'a str>,
+    auth_type: Option<Auth>,
     remote_user: Option<&'a str>,
     remote_ident: Option<&'a str>,
     content_type: Option<&'a str>,
@@ -70,7 +73,7 @@ impl<'a> CgiScript<'a> {
     builder_property!(remote_addr, &'a str);
     builder_property!(path_info, &'a str);
     builder_property!(path_translated, &'a str);
-    builder_property!(auth_type, &'a str);
+    builder_property!(auth_type, Auth);
     builder_property!(remote_user, &'a str);
     builder_property!(remote_ident, &'a str);
     builder_property!(content_type, &'a str);
@@ -104,8 +107,11 @@ impl<'a> CgiScript<'a> {
             // FIXME: Make sure this does the correct thing.
             .env("PATH_TRANSLATED", self.path_translated.unwrap_or(""));
 
-        cmd.env("AUTH_TYPE", self.auth_type.unwrap_or(""))
-            .env("REMOTE_USER", self.remote_user.unwrap_or(""));
+        cmd.env(
+            "AUTH_TYPE",
+            self.auth_type.map(|auth| auth.into()).unwrap_or(""),
+        )
+        .env("REMOTE_USER", self.remote_user.unwrap_or(""));
 
         cmd.env("REMOTE_IDENT", self.remote_ident.unwrap_or(""))
             .env("CONTENT_TYPE", self.content_type.unwrap_or(""));
