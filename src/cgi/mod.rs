@@ -5,6 +5,9 @@ use std::{
     process::{Command, Stdio},
 };
 
+pub mod rocket;
+
+#[derive(Debug)]
 pub struct CgiScript<'a> {
     command: &'a str,
     args: &'a [&'a str],
@@ -26,6 +29,7 @@ pub struct CgiScript<'a> {
 
 macro_rules! builder_property {
     ($property:ident, $ty:ty) => {
+        #[allow(dead_code)]
         pub fn $property(self, $property: $ty) -> Self {
             Self {
                 $property: Some($property),
@@ -112,7 +116,7 @@ impl<'a> CgiScript<'a> {
 
         let mut process = cmd.spawn()?;
         io::copy(&mut data, &mut process.stdin.take().unwrap())?;
-        let output = process.wait_with_output()?;
+        let output = dbg!(process.wait_with_output()?);
 
         Ok(parse_cgi_output(&output.stdout)?)
     }
@@ -237,6 +241,7 @@ impl fmt::Display for ParseCgiOutputError {
 
 impl std::error::Error for ParseCgiOutputError {}
 
+#[derive(Debug)]
 pub struct CgiResponse {
     status_code: u16,
     headers: HashMap<String, String>,
