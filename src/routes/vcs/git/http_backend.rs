@@ -25,25 +25,6 @@ impl Handler for GitHttpBackend {
         // TODO: Handle the error case.
         let config: State<Config> = request.guard().unwrap();
 
-        let path_translated = dbg!(&self.repo_dir).join(request.uri().segments().enumerate().fold(
-            String::new(),
-            |mut path, (i, segment)| {
-                if i > 0 {
-                    #[cfg(windows)]
-                    path.push('\\');
-                    #[cfg(not(windows))]
-                    path.push('/');
-                }
-                path.push_str(segment);
-                if i == 1 {
-                    if !path.ends_with(".git") {
-                        path.push_str(".git");
-                    }
-                }
-                path
-            },
-        ));
-
         Outcome::from(
             request,
             dbg!(dbg!(CgiScript::new("git", &["http-backend"], &[])
@@ -60,7 +41,7 @@ impl Handler for GitHttpBackend {
                 )
                 // TODO: Do .git normalization to PATH_INFO
                 .path_info(request.uri().path())
-                .path_translated(&path_translated.to_str().unwrap().replace('\\', "/"))
+                .path_translated(&translate_git_path(&self.repo_dir, request))
                 .content_type(
                     &request
                         .content_type()
@@ -74,6 +55,32 @@ impl Handler for GitHttpBackend {
             }),
         )
     }
+}
+
+fn translate_git_path(repo_dir: &Path, request: &Request) -> String {
+    repo_dir
+        .join(
+            request
+                .uri()
+                .segments()
+                .enumerate()
+                .fold(String::new(), |mut path, (i, segment)| {
+                    if i > 0 {
+                        #[cfg(windows)]
+                        path.push('\\');
+                        #[cfg(not(windows))]
+                        path.push('/');
+                    }
+                    path.push_str(segment);
+                    if i == 1 && !path.ends_with(".git") {
+                        path.push_str(".git");
+                    }
+                    path
+                }),
+        )
+        .to_str()
+        .unwrap()
+        .replace('\\', "/")
 }
 
 impl Into<Vec<Route>> for GitHttpBackend {
