@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    ffi::OsStr,
     fmt,
     io::{self, Read},
     process::{Command, Stdio},
@@ -88,33 +89,34 @@ impl<'a> CgiScript<'a> {
 
         // FIXME: Add more CGI environment variables and ensure the current ones are correct.
 
-        cmd.env("SERVER_SOFTWARE", self.server_software.unwrap_or(""))
-            .env("SERVER_NAME", self.server_name.unwrap_or(""))
-            .env("GATEWAY_INTERFACE", "CGI/1.1")
-            // FIXME:
-            .env("SERVER_PROTOCOL", "HTTP/1.1")
-            .env("SERVER_PORT", self.server_port.unwrap_or(""));
+        opt_env(&mut cmd, "SERVER_SOFTWARE", self.server_software);
+        opt_env(&mut cmd, "SERVER_NAME", self.server_name);
+        cmd.env("GATEWAY_INTERFACE", "CGI/1.1");
+        // FIXME:
+        cmd.env("SERVER_PROTOCOL", "HTTP/1.1");
+        opt_env(&mut cmd, "SERVER_PORT", self.server_port);
 
-        cmd.env("REQUEST_METHOD", self.request_method.unwrap_or(""))
-            .env("QUERY_STRING", self.query_string.unwrap_or(""))
-            .env("REMOTE_HOST", self.remote_host.unwrap_or(""))
-            .env("REMOTE_ADDR", self.remote_addr.unwrap_or(""));
+        opt_env(&mut cmd, "REQUEST_METHOD", self.request_method);
+        opt_env(&mut cmd, "QUERY_STRING", self.query_string);
+        opt_env(&mut cmd, "REMOTE_HOST", self.remote_host);
+        opt_env(&mut cmd, "REMOTE_ADDR", self.remote_addr);
 
         // FIXME: Make sure that paths behave properly when a CgiScript route is mounted
         //        somewhere other than at the root path.
         // FIXME: Handle paths that end in .git
-        cmd.env("PATH_INFO", self.path_info.unwrap_or(""))
-            // FIXME: Make sure this does the correct thing.
-            .env("PATH_TRANSLATED", self.path_translated.unwrap_or(""));
+        opt_env(&mut cmd, "PATH_INFO", self.path_info);
+        // FIXME: Make sure this does the correct thing.
+        opt_env(&mut cmd, "PATH_TRANSLATED", self.path_translated);
 
-        cmd.env(
+        opt_env(
+            &mut cmd,
             "AUTH_TYPE",
-            self.auth_type.map(|auth| auth.into()).unwrap_or(""),
-        )
-        .env("REMOTE_USER", self.remote_user.unwrap_or(""));
+            self.auth_type.map(|auth| auth.as_str()),
+        );
+        opt_env(&mut cmd, "REMOTE_USER", self.remote_user);
 
-        cmd.env("REMOTE_IDENT", self.remote_ident.unwrap_or(""))
-            .env("CONTENT_TYPE", self.content_type.unwrap_or(""));
+        opt_env(&mut cmd, "REMOTE_IDENT", self.remote_ident);
+        opt_env(&mut cmd, "CONTENT_TYPE", self.content_type);
 
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -125,6 +127,16 @@ impl<'a> CgiScript<'a> {
         let output = dbg!(process.wait_with_output()?);
 
         Ok(parse_cgi_output(&output.stdout)?)
+    }
+}
+
+fn opt_env<K, V>(cmd: &mut Command, key: K, val: Option<V>)
+where
+    K: AsRef<OsStr>,
+    V: AsRef<OsStr>,
+{
+    if let Some(val) = val {
+        cmd.env(key, val);
     }
 }
 
