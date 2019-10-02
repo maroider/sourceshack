@@ -104,16 +104,23 @@ impl<'a> CgiScript<'a> {
         // FIXME: Make sure this does the correct thing.
         opt_env(&mut cmd, "PATH_TRANSLATED", self.path_translated);
         cmd.env("QUERY_STRING", self.query_string.unwrap_or(""));
+        // TODO: Error when not set
         opt_env(&mut cmd, "REMOTE_ADDR", self.remote_addr);
         opt_env(&mut cmd, "REMOTE_HOST", self.remote_host);
         opt_env(&mut cmd, "REMOTE_IDENT", self.remote_ident);
+        // TODO: Error when AUTH_TYPE is set but REMOTE_USER isn't
         opt_env(&mut cmd, "REMOTE_USER", self.remote_user);
+        // TODO: Error when REQUEST_METHOD is not set
         opt_env(&mut cmd, "REQUEST_METHOD", self.request_method);
         // TODO: Add SCRIPT_NAME
+        // TODO: Error when SERVER_NAME is not set
         opt_env(&mut cmd, "SERVER_NAME", self.server_name);
+        // TODO: Error when SERVER_PORT is not set
         opt_env(&mut cmd, "SERVER_PORT", self.server_port);
-        // FIXME:
+        // TOOD: Evalute if it's useful to forward HTTP/2 requests through CGI
+        // TODO: Support setting SERVER_PROTOCOL to "INCLUDED"
         cmd.env("SERVER_PROTOCOL", "HTTP/1.1");
+        // TODO: Error when not set
         opt_env(&mut cmd, "SERVER_SOFTWARE", self.server_software);
 
         cmd.stdin(Stdio::piped())
