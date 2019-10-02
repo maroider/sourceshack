@@ -103,7 +103,7 @@ impl<'a> CgiScript<'a> {
         cmd.env("PATH_INFO", self.path_info.unwrap_or("/"));
         // FIXME: Make sure this does the correct thing.
         opt_env(&mut cmd, "PATH_TRANSLATED", self.path_translated);
-        opt_env(&mut cmd, "QUERY_STRING", self.query_string);
+        cmd.env("QUERY_STRING", self.query_string.unwrap_or(""));
         opt_env(&mut cmd, "REMOTE_ADDR", self.remote_addr);
         opt_env(&mut cmd, "REMOTE_HOST", self.remote_host);
         opt_env(&mut cmd, "REMOTE_IDENT", self.remote_ident);
