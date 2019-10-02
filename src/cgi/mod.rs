@@ -65,19 +65,19 @@ impl<'a> CgiScript<'a> {
         }
     }
 
-    builder_property!(server_software, &'a str);
-    builder_property!(server_name, &'a str);
-    builder_property!(server_port, &'a str);
-    builder_property!(request_method, &'a str);
-    builder_property!(query_string, &'a str);
-    builder_property!(remote_host, &'a str);
-    builder_property!(remote_addr, &'a str);
+    builder_property!(auth_type, Auth);
+    builder_property!(content_type, &'a str);
     builder_property!(path_info, &'a str);
     builder_property!(path_translated, &'a str);
-    builder_property!(auth_type, Auth);
-    builder_property!(remote_user, &'a str);
+    builder_property!(query_string, &'a str);
+    builder_property!(remote_addr, &'a str);
+    builder_property!(remote_host, &'a str);
     builder_property!(remote_ident, &'a str);
-    builder_property!(content_type, &'a str);
+    builder_property!(remote_user, &'a str);
+    builder_property!(request_method, &'a str);
+    builder_property!(server_name, &'a str);
+    builder_property!(server_port, &'a str);
+    builder_property!(server_software, &'a str);
 
     pub fn run<R: Read>(self, mut data: R) -> Result<CgiResponse, CgiScriptError> {
         let mut cmd = Command::new(&self.command);
@@ -89,34 +89,32 @@ impl<'a> CgiScript<'a> {
 
         // FIXME: Add more CGI environment variables and ensure the current ones are correct.
 
-        opt_env(&mut cmd, "SERVER_SOFTWARE", self.server_software);
-        opt_env(&mut cmd, "SERVER_NAME", self.server_name);
-        cmd.env("GATEWAY_INTERFACE", "CGI/1.1");
-        // FIXME:
-        cmd.env("SERVER_PROTOCOL", "HTTP/1.1");
-        opt_env(&mut cmd, "SERVER_PORT", self.server_port);
-
-        opt_env(&mut cmd, "REQUEST_METHOD", self.request_method);
-        opt_env(&mut cmd, "QUERY_STRING", self.query_string);
-        opt_env(&mut cmd, "REMOTE_HOST", self.remote_host);
-        opt_env(&mut cmd, "REMOTE_ADDR", self.remote_addr);
-
-        // FIXME: Make sure that paths behave properly when a CgiScript route is mounted
-        //        somewhere other than at the root path.
-        // FIXME: Handle paths that end in .git
-        opt_env(&mut cmd, "PATH_INFO", self.path_info);
-        // FIXME: Make sure this does the correct thing.
-        opt_env(&mut cmd, "PATH_TRANSLATED", self.path_translated);
-
         opt_env(
             &mut cmd,
             "AUTH_TYPE",
             self.auth_type.map(|auth| auth.as_str()),
         );
-        opt_env(&mut cmd, "REMOTE_USER", self.remote_user);
-
-        opt_env(&mut cmd, "REMOTE_IDENT", self.remote_ident);
+        // TODO: Add CONTENT_LENGTH
         opt_env(&mut cmd, "CONTENT_TYPE", self.content_type);
+        cmd.env("GATEWAY_INTERFACE", "CGI/1.1");
+        // FIXME: Make sure that paths behave properly when a CgiScript route is mounted
+        //        somewhere other than at the root path.
+        // FIXME: Handle paths that end in .git
+        cmd.env("PATH_INFO", self.path_info.unwrap_or("/"));
+        // FIXME: Make sure this does the correct thing.
+        opt_env(&mut cmd, "PATH_TRANSLATED", self.path_translated);
+        opt_env(&mut cmd, "QUERY_STRING", self.query_string);
+        opt_env(&mut cmd, "REMOTE_ADDR", self.remote_addr);
+        opt_env(&mut cmd, "REMOTE_HOST", self.remote_host);
+        opt_env(&mut cmd, "REMOTE_IDENT", self.remote_ident);
+        opt_env(&mut cmd, "REMOTE_USER", self.remote_user);
+        opt_env(&mut cmd, "REQUEST_METHOD", self.request_method);
+        // TODO: Add SCRIPT_NAME
+        opt_env(&mut cmd, "SERVER_NAME", self.server_name);
+        opt_env(&mut cmd, "SERVER_PORT", self.server_port);
+        // FIXME:
+        cmd.env("SERVER_PROTOCOL", "HTTP/1.1");
+        opt_env(&mut cmd, "SERVER_SOFTWARE", self.server_software);
 
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
