@@ -11,6 +11,8 @@ pub mod rocket;
 
 use auth::Auth;
 
+// TODO: Use the typestate pattern to make it impossible to invoke a CGI
+//       script with missing required environment variables.
 #[derive(Debug)]
 pub struct CgiScript<'a> {
     command: &'a str,
@@ -34,6 +36,16 @@ pub struct CgiScript<'a> {
 macro_rules! builder_property {
     ($property:ident, $ty:ty) => {
         #[allow(dead_code)]
+        pub fn $property(self, $property: $ty) -> Self {
+            Self {
+                $property: Some($property),
+                ..self
+            }
+        }
+    };
+    ($property:ident, $ty:ty, $doc_str:expr) => {
+        #[allow(dead_code)]
+        #[doc = $doc_str]
         pub fn $property(self, $property: $ty) -> Self {
             Self {
                 $property: Some($property),
@@ -67,7 +79,7 @@ impl<'a> CgiScript<'a> {
 
     builder_property!(auth_type, Auth);
     builder_property!(content_type, &'a str);
-    builder_property!(path_info, &'a str);
+    builder_property!(path_info, &'a str, "PATH_INFO should not be URL-encoded.");
     builder_property!(path_translated, &'a str);
     builder_property!(query_string, &'a str);
     builder_property!(remote_addr, &'a str);
