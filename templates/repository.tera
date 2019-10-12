@@ -6,21 +6,23 @@
 {% endblock head %}
 {%block body%}
   <h1>{{ owner }}/{{ name }}</h1>
-  <table class="files">
-    <tbody>
-      {% for entry in tree | sort(attribute="is_not_dir") %}
-          <td class="icon">
-            {%- if entry.kind == 1 -%}
-              📄
-            {%- elif entry.kind == 2 -%}
-              📁
-            {%- else -%}
-              ⁉
-            {%- endif -%}
-          </td>
-          <td class="name">{{ entry.name }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="files">
+    <table>
+      <tbody>
+        {% for entry in tree | sort(attribute="is_not_dir") %}
+            <td class="icon">
+              {%- if entry.kind == 1 -%}
+                📄
+              {%- elif entry.kind == 2 -%}
+                📁
+              {%- else -%}
+                ⁉
+              {%- endif -%}
+            </td>
+            <td class="name">{{ entry.name }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {%endblock body%}
