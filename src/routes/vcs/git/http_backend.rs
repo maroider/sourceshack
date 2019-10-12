@@ -25,6 +25,11 @@ impl Handler for GitHttpBackend {
         // TODO: Handle the error case.
         let config: State<Config> = request.guard().unwrap();
 
+        let mut request_path = request.uri().path().to_string();
+        if !request_path.ends_with(".git") {
+            request_path.push_str(".git");
+        }
+
         Outcome::from(
             request,
             dbg!(dbg!(CgiScript::new("git", &["http-backend"], &[])
@@ -39,8 +44,7 @@ impl Handler for GitHttpBackend {
                         .map(|ip| ip.to_string())
                         .unwrap_or_default()
                 )
-                // TODO: Do .git normalization to PATH_INFO
-                .path_info(request.uri().path())
+                .path_info(&request_path)
                 .path_translated(&translate_git_path(&self.repo_dir, request))
                 .content_type(
                     &request
