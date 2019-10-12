@@ -2,24 +2,47 @@ use std::{convert::TryFrom, env, path::PathBuf};
 
 use git2::Repository;
 use log::warn;
-use rocket::{get, http::Status, routes, Route};
+use rocket::{
+    get,
+    http::Status,
+    request::{self, FromRequest},
+    response::Redirect,
+    routes, Request, Route,
+};
 use rocket_contrib::templates::Template;
 use serde::{Deserialize, Serialize};
 
 use crate::util::ensure_correct_path_separator;
 
 pub fn routes() -> Vec<Route> {
-    routes![view_repository]
+    routes![redirect_repository_dot_git, view_repository]
 }
 
-#[get("/<owner>/<repo>")]
-pub fn view_repository(owner: String, repo: String) -> Result<Template, Status> {
+// TODO: Consider doing the inverse of the current setup.
+//       `PathEndsWithDotGit` would become `NoDotGit` and would be a request
+//       guard on `view_repository` instead of `redirect_repository_dot_git`.
+//       The two routes would also swap ranks and locations in this file.
+#[get("/<owner>/<repo>", rank = 1)]
+fn redirect_repository_dot_git(
+    _p: PathEndsWithDotGit,
+    owner: String,
+    mut repo: String,
+) -> Redirect {
+    repo.truncate(repo.len() - 4);
+    Redirect::permanent(format!("/{}/{}", owner, repo))
+}
+
+#[get("/<owner>/<repo>", rank = 2)]
+fn view_repository(owner: String, repo: String) -> Result<Template, Status> {
     let base = PathBuf::from(ensure_correct_path_separator(
         env::var("SRCO2_DATA_DIR").expect("SRCO2_DATA_DIR is not set"),
     ))
     .join("git_repos");
     let owner_dir = base.join(&owner);
-    let repo_dir = owner_dir.join(&repo);
+    let mut repo_dir = owner_dir.join(&repo);
+    let mut ext = repo_dir.extension().unwrap_or_default().to_os_string();
+    ext.push("git");
+    repo_dir.set_extension(ext);
 
     match Repository::open_bare(repo_dir) {
         Ok(repository) => {
@@ -110,3 +133,17 @@ impl std::fmt::Display for FileTypeError {
 }
 
 impl std::error::Error for FileTypeError {}
+
+struct PathEndsWithDotGit;
+
+impl<'a, 'r> FromRequest<'a, 'r> for PathEndsWithDotGit {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+        if request.uri().path().ends_with(".git") {
+            request::Outcome::Success(Self)
+        } else {
+            request::Outcome::Forward(())
+        }
+    }
+}
