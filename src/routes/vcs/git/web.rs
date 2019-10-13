@@ -5,9 +5,8 @@ use log::warn;
 use rocket::{
     get,
     http::Status,
-    request::{self, FromRequest},
-    response::Redirect,
-    routes, Request, Route,
+    response::{Redirect, Responder},
+    routes, Route,
 };
 use rocket_contrib::templates::Template;
 use serde::{Deserialize, Serialize};
@@ -15,25 +14,17 @@ use serde::{Deserialize, Serialize};
 use crate::util::ensure_correct_path_separator;
 
 pub fn routes() -> Vec<Route> {
-    routes![redirect_repository_dot_git, view_repository]
+    routes![view_repository]
 }
 
-// TODO: Consider doing the inverse of the current setup.
-//       `PathEndsWithDotGit` would become `NoDotGit` and would be a request
-//       guard on `view_repository` instead of `redirect_repository_dot_git`.
-//       The two routes would also swap ranks and locations in this file.
-#[get("/<owner>/<repo>", rank = 1)]
-fn redirect_repository_dot_git(
-    _p: PathEndsWithDotGit,
-    owner: String,
-    mut repo: String,
-) -> Redirect {
-    repo.truncate(repo.len() - 4);
-    Redirect::permanent(format!("/{}/{}", owner, repo))
-}
+#[get("/<owner>/<repo>")]
+fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrStatus> {
+    if repo.ends_with(".git") {
+        let mut repo = repo;
+        repo.truncate(repo.len() - 4);
+        return Err(Redirect::permanent(format!("/{}/{}", owner, repo)).into());
+    }
 
-#[get("/<owner>/<repo>", rank = 2)]
-fn view_repository(owner: String, repo: String) -> Result<Template, Status> {
     let base = PathBuf::from(ensure_correct_path_separator(
         env::var("SRCO2_DATA_DIR").expect("SRCO2_DATA_DIR is not set"),
     ))
@@ -73,9 +64,10 @@ fn view_repository(owner: String, repo: String) -> Result<Template, Status> {
         Err(err) => {
             if err.code() == git2::ErrorCode::NotFound {
                 dbg!();
-                Err(Status::NotFound)
+                Err(Status::NotFound.into())
             } else {
                 warn!("Error in {}/{}: {}", owner, repo, err);
+                Err(Status::InternalServerError.into())
                 Err(Status::InternalServerError)
             }
         }
@@ -134,16 +126,20 @@ impl std::fmt::Display for FileTypeError {
 
 impl std::error::Error for FileTypeError {}
 
-struct PathEndsWithDotGit;
+#[derive(Debug, Responder)]
+pub enum RedirectOrStatus {
+    Redirect(Redirect),
+    Status(Status),
+}
 
-impl<'a, 'r> FromRequest<'a, 'r> for PathEndsWithDotGit {
-    type Error = ();
+impl From<Redirect> for RedirectOrStatus {
+    fn from(from: Redirect) -> Self {
+        Self::Redirect(from)
+    }
+}
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-        if request.uri().path().ends_with(".git") {
-            request::Outcome::Success(Self)
-        } else {
-            request::Outcome::Forward(())
-        }
+impl From<Status> for RedirectOrStatus {
+    fn from(from: Status) -> Self {
+        Self::Status(from)
     }
 }
