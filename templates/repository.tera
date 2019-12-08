@@ -20,6 +20,7 @@
               {%- endif -%}
             </td>
             <td class="name">{{ entry.name }}</td>
+            <td class="commit-message">{{ entry.commit_message }}</td>
           </tr>
         {% endfor %}
       </tbody>

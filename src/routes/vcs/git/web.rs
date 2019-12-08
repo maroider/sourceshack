@@ -1,6 +1,6 @@
-use std::{convert::TryFrom, env, path::PathBuf};
+use std::{env, path::PathBuf};
 
-use git2::Repository;
+use git2::{BranchType, Repository};
 use log::warn;
 use rocket::{
     get,
@@ -12,6 +12,8 @@ use rocket_contrib::templates::Template;
 use serde::{Deserialize, Serialize};
 
 use crate::util::ensure_correct_path_separator;
+
+use display_tree::{DisplayTree, FileMode};
 
 pub fn routes() -> Vec<Route> {
     routes![view_repository]
@@ -37,23 +39,30 @@ fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrSt
 
     match Repository::open_bare(repo_dir) {
         Ok(repository) => {
-            let commit = repository.head().unwrap().peel_to_commit().unwrap();
-            // FIXME: Currently panics on empty repos
-            let tree: Vec<_> = commit
-                .tree()
-                .unwrap()
-                .iter()
-                .map(|entry| {
-                    let kind = FileType::try_from(entry.filemode())
-                        .map(|fm| fm as i8)
-                        .unwrap();
-                    TreeEntry {
-                        name: entry.name().unwrap().to_string(),
-                        kind,
-                        is_not_dir: kind != FileType::Directory as i8,
+            let master_branch = repository
+                .find_branch("master", BranchType::Local)
+                .expect("Could not find branch 'master'");
+            let reference = master_branch.get();
+            let branch_tip_commit_id = reference.target().unwrap();
+            let tree = DisplayTree::new("", &repository, branch_tip_commit_id)
+                .items
+                .into_iter()
+                .map(|item| {
+                    let kind = TreeEntryKind::from(item.filemode);
+                    let trimmed_commit_message = item.last_commit_message.trim();
+                    DisplayTreeEntry {
+                        name: item.name,
+                        kind: kind as i8,
+                        is_not_dir: kind != TreeEntryKind::Directory,
+                        commit_message: trimmed_commit_message
+                            .get(0..50)
+                            .map(|slice| slice)
+                            .unwrap_or(trimmed_commit_message)
+                            .to_string(),
                     }
                 })
                 .collect();
+
             let context = RepositoryInfo {
                 owner: &owner,
                 name: &repo,
@@ -68,7 +77,6 @@ fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrSt
             } else {
                 warn!("Error in {}/{}: {}", owner, repo, err);
                 Err(Status::InternalServerError.into())
-                Err(Status::InternalServerError)
             }
         }
     }
@@ -78,53 +86,35 @@ fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrSt
 struct RepositoryInfo<'a> {
     owner: &'a str,
     name: &'a str,
-    tree: Vec<TreeEntry>,
+    tree: Vec<DisplayTreeEntry>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct TreeEntry {
+struct DisplayTreeEntry {
     name: String,
     kind: i8,
     is_not_dir: bool,
+    commit_message: String,
 }
 
-enum FileType {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TreeEntryKind {
     File = 1,
     Directory = 2,
     Symlink = 3,
     Gitlink = 4,
 }
 
-impl TryFrom<i32> for FileType {
-    type Error = FileTypeError;
-
-    fn try_from(fm: i32) -> Result<Self, Self::Error> {
-        // https://unix.stackexchange.com/questions/450480/file-permission-with-six-bytes-in-git-what-does-it-mean/450488#450488
-        let ft = fm >> 12;
-        if ft ^ 0b1000 == 0 {
-            Ok(Self::File)
-        } else if ft ^ 0b0100 == 0 {
-            Ok(Self::Directory)
-        } else if ft ^ 0b1010 == 0 {
-            Ok(Self::Symlink)
-        } else if ft ^ 0b1110 == 0 {
-            Ok(Self::Gitlink)
-        } else {
-            Err(FileTypeError(fm))
+impl From<FileMode> for TreeEntryKind {
+    fn from(from: FileMode) -> Self {
+        match from {
+            FileMode::File | FileMode::GroupWriteableFile | FileMode::Executable => Self::File,
+            FileMode::Directory => Self::Directory,
+            FileMode::Symlink => Self::Symlink,
+            FileMode::Gitlink => Self::Gitlink,
         }
     }
 }
-
-#[derive(Debug)]
-struct FileTypeError(i32);
-
-impl std::fmt::Display for FileTypeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Invalid file type: {}", self.0)
-    }
-}
-
-impl std::error::Error for FileTypeError {}
 
 #[derive(Debug, Responder)]
 pub enum RedirectOrStatus {
@@ -141,5 +131,164 @@ impl From<Redirect> for RedirectOrStatus {
 impl From<Status> for RedirectOrStatus {
     fn from(from: Status) -> Self {
         Self::Status(from)
+    }
+}
+
+mod display_tree {
+    use std::{
+        collections::HashMap,
+        path::{self, Path},
+    };
+
+    use git2::{ObjectType, Oid, Repository, TreeEntry};
+
+    #[derive(Debug)]
+    pub struct DisplayTree {
+        pub items: Vec<DisplayTreeItem>,
+    }
+
+    impl DisplayTree {
+        /// # Panics
+        ///
+        /// This function will panice if `path` points to something other than a directory
+        pub fn new<P>(path: P, repository: &Repository, commit_id: Oid) -> Self
+        where
+            P: AsRef<Path>,
+        {
+            let path = path.as_ref();
+            let invalid_prefix = path.components().take(1).find(|component| match component {
+                path::Component::Prefix(_)
+                | path::Component::RootDir
+                | path::Component::CurDir
+                | path::Component::ParentDir => true,
+                path::Component::Normal(_) => false,
+            });
+            let normalized_path = invalid_prefix
+                .map(|invalid_prefix| path.strip_prefix(invalid_prefix).unwrap())
+                .unwrap_or(path);
+
+            let mut revwalk = repository.revwalk().unwrap();
+            revwalk.push(commit_id).unwrap();
+
+            let mut oldest_commit_for_object = HashMap::new();
+
+            for older_commit_id in revwalk {
+                let older_commit_id = older_commit_id.unwrap();
+                let older_commit = repository.find_commit(older_commit_id).unwrap();
+                let older_tree = older_commit.tree().unwrap();
+                let older_target_tree = {
+                    if normalized_path == Path::new("") {
+                        older_tree
+                    } else {
+                        older_tree
+                            .get_path(normalized_path)
+                            .unwrap()
+                            .to_object(repository)
+                            .unwrap()
+                            .peel_to_tree()
+                            .unwrap()
+                    }
+                };
+                for entry in older_target_tree.iter() {
+                    if entry.kind() == Some(ObjectType::Blob)
+                        || entry.kind() == Some(ObjectType::Tree)
+                    {
+                        oldest_commit_for_object.insert(entry.id(), older_commit_id);
+                    }
+                }
+            }
+
+            let commit = repository.find_commit(commit_id).unwrap();
+            let tree = commit.tree().unwrap();
+
+            let target_tree = {
+                if normalized_path == Path::new("") {
+                    tree
+                } else {
+                    tree.get_path(normalized_path)
+                        .unwrap()
+                        .to_object(repository)
+                        .unwrap()
+                        .peel_to_tree()
+                        .unwrap()
+                }
+            };
+
+            let items = target_tree
+                .iter()
+                .filter_map(|entry| {
+                    if entry.kind() == Some(ObjectType::Blob)
+                        || entry.kind() == Some(ObjectType::Tree)
+                    {
+                        Some(DisplayTreeItem::new(
+                            repository,
+                            *oldest_commit_for_object.get(&entry.id()).unwrap(),
+                            entry,
+                        ))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            Self { items }
+        }
+    }
+
+    // TODO: !
+    #[derive(Debug)]
+    pub struct DisplayTreeItem {
+        pub name: String,
+        pub last_commit_id: Oid,
+        pub last_commit_message: String,
+        pub filemode: FileMode,
+    }
+
+    impl DisplayTreeItem {
+        fn new(repository: &Repository, last_commit_id: Oid, entry: TreeEntry<'_>) -> Self {
+            let last_commit = repository.find_commit(last_commit_id).unwrap();
+            Self {
+                name: entry.name().unwrap().to_string(),
+                last_commit_id,
+                last_commit_message: last_commit.message().unwrap().to_string(),
+                filemode: FileMode::from_i32(entry.filemode()).unwrap(),
+            }
+        }
+    }
+
+    /// https://stackoverflow.com/a/8347325
+    #[allow(clippy::unreadable_literal)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum FileMode {
+        Directory = 0o040000,
+        File = 0o100644,
+        GroupWriteableFile = 0o100664,
+        Executable = 0o100755,
+        Symlink = 0o120000,
+        Gitlink = 0o160000,
+    }
+
+    impl FileMode {
+        pub fn is(self, other: i32) -> bool {
+            self as i32 == other
+        }
+
+        pub fn from_i32(from: i32) -> Option<Self> {
+            if Self::Directory.is(from) {
+                Some(Self::Directory)
+            } else if Self::File.is(from) {
+                Some(Self::File)
+            } else if Self::GroupWriteableFile.is(from) {
+                Some(Self::GroupWriteableFile)
+            } else if Self::Executable.is(from) {
+                Some(Self::Executable)
+            } else if Self::Symlink.is(from) {
+                Some(Self::Symlink)
+            } else if Self::Gitlink.is(from) {
+                Some(Self::Gitlink)
+            } else {
+                None
+            }
+        }
     }
 }
