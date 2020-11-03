@@ -2,7 +2,7 @@
 {% block title %} {{ owner }}/{{ name }} {% endblock title %}
 {% block head %}
   {{ super() }}
-  <link rel="stylesheet" href="/repository.css">
+  <link rel="stylesheet" href="/static/repository.css">
 {% endblock head %}
 {%block body%}
   <h1>{{ owner }}/{{ name }}</h1>

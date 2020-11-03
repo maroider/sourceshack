@@ -24,7 +24,7 @@ fn main() {
         .manage(config)
         .mount("/", routes::vcs::git::web::routes())
         .mount("/", GitHttpBackend::new(data_dir.join("git_repos")))
-        .mount("/", StaticFiles::from("static").rank(20))
+        .mount("/static", StaticFiles::from("static").rank(-100))
         .attach(Template::fairing())
         .launch();
 }
