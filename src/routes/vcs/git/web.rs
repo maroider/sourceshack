@@ -52,7 +52,12 @@ fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrSt
                     let trimmed_commit_message = item.last_commit_message.trim();
                     DisplayTreeEntry {
                         name: item.name,
-                        kind: kind as i8,
+                        icon: match kind {
+                            TreeEntryKind::File => "default_file".to_string(),
+                            TreeEntryKind::Directory => "default_folder".to_string(),
+                            TreeEntryKind::Symlink => "default_file".to_string(),
+                            TreeEntryKind::Gitlink => "file_type_git2".to_string(),
+                        },
                         is_not_dir: kind != TreeEntryKind::Directory,
                         commit_message: trimmed_commit_message
                             .get(0..50)
@@ -92,17 +97,17 @@ struct RepositoryInfo<'a> {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct DisplayTreeEntry {
     name: String,
-    kind: i8,
+    icon: String,
     is_not_dir: bool,
     commit_message: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TreeEntryKind {
-    File = 1,
-    Directory = 2,
-    Symlink = 3,
-    Gitlink = 4,
+    File,
+    Directory,
+    Symlink,
+    Gitlink,
 }
 
 impl From<FileMode> for TreeEntryKind {
