@@ -28,7 +28,7 @@ fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrSt
     }
 
     let base = PathBuf::from(ensure_correct_path_separator(
-        env::var("SRCO2_DATA_DIR").expect("SRCO2_DATA_DIR is not set"),
+        env::var("SOURCESHACK_DATA_DIR").expect("SOURCESHACK_DATA_DIR is not set"),
     ))
     .join("git_repos");
     let owner_dir = base.join(&owner);

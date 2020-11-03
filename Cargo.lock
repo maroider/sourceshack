@@ -1265,7 +1265,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "srco2"
+name = "sourceshack"
 version = "0.1.0"
 dependencies = [
  "dotenv",

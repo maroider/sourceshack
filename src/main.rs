@@ -17,7 +17,7 @@ fn main() {
     let config = Config::active().unwrap();
 
     let data_dir = PathBuf::from(util::ensure_correct_path_separator(
-        util::read_expected_env_var("SRCO2_DATA_DIR"),
+        util::read_expected_env_var("SOURCESHACK_DATA_DIR"),
     ));
 
     rocket::custom(config.clone())
