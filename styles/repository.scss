@@ -1,0 +1,41 @@
+div.files {
+  background-color: whitesmoke;
+  border-color: lightblue;
+  border-radius: 2px;
+  border-style: solid;
+  border-width: 1px;
+  display: inline-block;
+
+  table {
+    border-collapse: collapse;
+    padding: 0px;
+
+    tbody {
+      td {
+        border-spacing: 0px;
+        border-top: 1px solid lightblue;
+        padding-bottom: 4px;
+        padding-top: 4px;
+      }
+
+      tr:first-child td {
+        border-top: none;
+      }
+
+      td.icon {
+        padding-left: 3px;
+        padding-right: 2px;
+      }
+
+      td.icon img.repo-file-icon {
+        width: 1.25em;
+        height: 1.25em;
+      }
+
+      td.name {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+    }
+  }
+}
