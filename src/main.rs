@@ -6,6 +6,7 @@ use rocket::Config;
 use rocket_contrib::{serve::StaticFiles, templates::Template};
 
 mod cgi;
+mod guards;
 mod routes;
 mod util;
 

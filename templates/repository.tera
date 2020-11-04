@@ -1,5 +1,5 @@
 {% extends "base" %}
-{% block title %} {{ owner }}/{{ name }} {% endblock title %}
+{% block title %} ~{{ owner }}/{{ name }} - sourceshack {% endblock title %}
 {% block head %}
   {{ super() }}
   <link rel="stylesheet" href="/static/repository.css">

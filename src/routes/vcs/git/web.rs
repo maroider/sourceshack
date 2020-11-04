@@ -11,7 +11,10 @@ use rocket::{
 use rocket_contrib::templates::Template;
 use serde::{Deserialize, Serialize};
 
-use crate::util::ensure_correct_path_separator;
+use crate::{
+    guards::{AaudStr, UserNameGuard},
+    util::ensure_correct_path_separator,
+};
 
 use display_tree::{DisplayTree, FileMode};
 
@@ -20,7 +23,11 @@ pub fn routes() -> Vec<Route> {
 }
 
 #[get("/<owner>/<repo>")]
-fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrStatus> {
+fn view_repository(
+    owner: UserNameGuard<'_>,
+    repo: AaudStr<'_>,
+) -> Result<Template, RedirectOrStatus> {
+    let repo = repo.to_string();
     if repo.ends_with(".git") {
         let mut repo = repo;
         repo.truncate(repo.len() - 4);
@@ -31,7 +38,7 @@ fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrSt
         env::var("SOURCESHACK_DATA_DIR").expect("SOURCESHACK_DATA_DIR is not set"),
     ))
     .join("git_repos");
-    let owner_dir = base.join(&owner);
+    let owner_dir = base.join(owner);
     let mut repo_dir = owner_dir.join(&repo);
     let mut ext = repo_dir.extension().unwrap_or_default().to_os_string();
     ext.push("git");
@@ -69,7 +76,7 @@ fn view_repository(owner: String, repo: String) -> Result<Template, RedirectOrSt
                 .collect();
 
             let context = RepositoryInfo {
-                owner: &owner,
+                owner: owner.as_ref(),
                 name: &repo,
                 tree,
             };
