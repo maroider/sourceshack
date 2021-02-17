@@ -1,12 +1,13 @@
 use std::path::{Path, PathBuf};
 
 use rocket::{
+    data::ByteUnit,
     handler::{Handler, Outcome},
     http::Method,
     Config, Data, Request, Response, Route, State,
 };
 
-use crate::cgi::CgiScript;
+use crate::cgi::{CgiScript, CgiScriptError};
 
 #[derive(Clone, Debug)]
 pub struct GitHttpBackend {
@@ -20,44 +21,53 @@ impl GitHttpBackend {
     }
 }
 
+#[async_trait::async_trait]
 impl Handler for GitHttpBackend {
-    fn handle<'r>(&self, request: &'r Request, data: Data) -> Outcome<'r> {
+    async fn handle<'r, 's: 'r>(&'s self, request: &'r Request<'_>, data: Data) -> Outcome<'r> {
         // TODO: Handle the error case.
-        let config: State<Config> = request.guard().unwrap();
+        let config: State<Config> = request.guard().await.unwrap();
 
         let mut request_path = request.uri().path().to_string();
         if !request_path.ends_with(".git") {
             request_path.push_str(".git");
         }
 
-        Outcome::from(
-            request,
-            dbg!(dbg!(CgiScript::new("git", &["http-backend"], &[])
-                .server_software("rocket")
-                .server_name(&config.address.to_string())
-                .server_port(&config.port.to_string())
-                .request_method(request.method().as_str())
-                .query_string(request.uri().query().unwrap_or(""))
-                .remote_addr(
-                    &request
-                        .client_ip()
-                        .map(|ip| ip.to_string())
-                        .unwrap_or_default()
-                )
-                .path_info(&request_path)
-                .path_translated(&translate_git_path(&self.repo_dir, request))
-                .content_type(
-                    &request
-                        .content_type()
-                        .map(|ct| ct.to_string())
-                        .unwrap_or_default()
-                ))
-            .run(data.open()))
-            .map(|response| {
-                let response: Response = response.into();
-                response
-            }),
-        )
+        let data = {
+            let mut data = data.open(ByteUnit::max_value());
+            let mut buf = Vec::new();
+            tokio::io::copy(&mut data, &mut buf).await.map(|_| buf)
+        };
+        let response = data
+            .map_err(|err| CgiScriptError::Io(err))
+            .and_then(|data| {
+                CgiScript::new("git", &["http-backend"], &[])
+                    .server_software("rocket")
+                    .server_name(&config.address.to_string())
+                    .server_port(&config.port.to_string())
+                    .request_method(request.method().as_str())
+                    .query_string(request.uri().query().unwrap_or(""))
+                    .remote_addr(
+                        &request
+                            .client_ip()
+                            .map(|ip| ip.to_string())
+                            .unwrap_or_default(),
+                    )
+                    .path_info(&request_path)
+                    .path_translated(&translate_git_path(&self.repo_dir, request))
+                    .content_type(
+                        &request
+                            .content_type()
+                            .map(|ct| ct.to_string())
+                            .unwrap_or_default(),
+                    )
+                    .run(data.as_slice())
+                    .map(|response| {
+                        let response: Response = response.into();
+                        response
+                    })
+            });
+
+        Outcome::try_from(request, response)
     }
 }
 

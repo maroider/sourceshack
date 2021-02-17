@@ -11,7 +11,7 @@ impl<'r> Into<Response<'r>> for CgiResponse {
         for (header_name, header_value) in self.headers {
             response.adjoin_raw_header(header_name, header_value);
         }
-        response.set_sized_body(Cursor::new(self.body));
+        response.set_sized_body(None, Cursor::new(self.body));
         response
     }
 }

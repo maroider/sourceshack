@@ -12,10 +12,11 @@ mod util;
 
 use routes::vcs::git::http_backend::GitHttpBackend;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     dotenv::dotenv().ok();
 
-    let config = Config::active().unwrap();
+    let config = Config::default();
 
     let data_dir = PathBuf::from(util::ensure_correct_path_separator(
         util::read_expected_env_var("SOURCESHACK_DATA_DIR"),
@@ -27,5 +28,7 @@ fn main() {
         .mount("/", GitHttpBackend::new(data_dir.join("git_repos")))
         .mount("/static", StaticFiles::from("static").rank(-100))
         .attach(Template::fairing())
-        .launch();
+        .launch()
+        .await
+        .unwrap();
 }
