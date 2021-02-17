@@ -67,8 +67,8 @@ fn view_repository(
                         },
                         is_not_dir: kind != TreeEntryKind::Directory,
                         commit_message: trimmed_commit_message
-                            .get(0..50)
-                            .map(|slice| slice)
+                            .split("\n\n")
+                            .nth(0)
                             .unwrap_or(trimmed_commit_message)
                             .to_string(),
                     }
