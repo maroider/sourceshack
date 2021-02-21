@@ -1,10 +1,14 @@
 {% extends "base" %}
-{% block title %} ~{{ owner }}/{{ name }} - sourceshack {% endblock title %}
+{% import "header" as header %}
+
+{% block title %} ~{{ owner }}/{{ name }} {% endblock title %}
 {% block head %}
   {{ super() }}
   <link rel="stylesheet" href="/static/repository.css">
+  {{ header::header_head() }}
 {% endblock head %}
 {%block body%}
+  {{ header::header() }}
   <h1>{{ owner }}/{{ name }}</h1>
   <div class="files">
     <table>

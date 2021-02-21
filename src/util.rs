@@ -1,4 +1,4 @@
-use std::env;
+use std::{collections::HashMap, env};
 
 pub fn ensure_correct_path_separator(string: String) -> String {
     if std::path::MAIN_SEPARATOR != '/' {
@@ -10,4 +10,8 @@ pub fn ensure_correct_path_separator(string: String) -> String {
 
 pub fn read_expected_env_var(name: &str) -> String {
     env::var(name).unwrap_or_else(|err| panic!("{} could not be read: {}", name, err))
+}
+
+pub fn tera_dummy_ctx() -> HashMap<(), ()> {
+    HashMap::default()
 }

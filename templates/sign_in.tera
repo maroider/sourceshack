@@ -1,0 +1,22 @@
+{% extends "base" %}
+{% import "header" as header %}
+
+{% block title %} sourceshack - sign in {% endblock title %}
+{% block head %}
+  {{ super() }}
+  <link rel="stylesheet" href="/static/sign_in.css">
+  {{ header::header_head() }}
+{% endblock head %}
+{%block body%}
+  {{ header::header(sign_in=false) }}
+  <h1>Sign in</h1>
+  <form accept-charset="UTF-8" method="POST">
+    <label for="form_login">Username or email address</label>
+    <input id="form_login" name="login" type="text">
+    <br>
+    <label for="form_password">Password</label>
+    <input id="form_password" name="password" type="password">
+    <br>
+    <input type="submit" value="Sign in">
+  </form>
+{%endblock body%}

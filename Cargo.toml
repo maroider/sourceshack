@@ -7,14 +7,19 @@ edition = "2018"
 [dependencies]
 async-trait = "0.1.42"
 dotenv = "0.15.0"
+either = "1.6.1"
 env_logger = "0.8.1"
 flate2 = "1.0.11"
 git2 = "0.13.11"
 lazy_static = "1.4.0"
 log = "0.4.8"
-rocket = { git = "https://github.com/SergioBenitez/Rocket/", rev = "e4c2324" }
+password-hash = "0.1.1"
+pbkdf2 = "0.7.3"
+rand_core = { version = "0.6.2", features = ["std"] }
+rocket = { git = "https://github.com/SergioBenitez/Rocket/", rev = "e4c2324", features = ["tls"] }
 rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket/", rev ="e4c2324", features = ["tera_templates"] }
 ron = "0.6.2"
 serde = { version = "1.0.99", features = ["derive"] }
 snafu = "0.6.8"
+sqlx = { version = "0.5.1", features = ["postgres", "runtime-tokio-rustls", "uuid"] }
 tokio = "1.2.0"

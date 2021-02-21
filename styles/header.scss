@@ -1,0 +1,24 @@
+header#main-header {
+  display: flex;
+  flex-direction: row;
+  padding-bottom: 10px;
+  border-bottom: 1px solid black;
+  a {
+    color: inherit;
+    text-decoration: none;
+    border: 1px solid black;
+    border-radius: 5px;
+    padding: 2px;
+  }
+  a:visited {
+    color: inherit;
+  }
+  .left-align {
+    justify-self: flex-start;
+    margin-right: auto;
+  }
+  .right-align {
+    justify-self: flex-end;
+    margin-left: auto;
+  }
+}

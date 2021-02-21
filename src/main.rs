@@ -4,6 +4,7 @@ use rocket::Config;
 use rocket_contrib::{serve::StaticFiles, templates::Template};
 
 mod cgi;
+mod db;
 mod guards;
 mod routes;
 mod util;
@@ -22,10 +23,13 @@ async fn main() {
 
     rocket::custom(config.clone())
         .manage(config)
+        .mount("/", routes::front_page::routes())
+        .mount("/", routes::account::routes())
         .mount("/", routes::vcs::git::web::routes())
         .mount("/", GitHttpBackend::new(data_dir.join("git_repos")))
         .mount("/static", StaticFiles::from("static").rank(-100))
         .attach(Template::fairing())
+        .attach(db::Postgres::fairing())
         .launch()
         .await
         .unwrap();

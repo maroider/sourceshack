@@ -1,0 +1,13 @@
+{% extends "base" %}
+{% import "header" as header %}
+
+{% block title %} sourceshack {% endblock title %}
+{% block head %}
+  {{ super() }}
+  <link rel="stylesheet" href="/static/front_page.css">
+  {{ header::header_head() }}
+{% endblock head %}
+{%block body%}
+  {{ header::header(front_page=false) }}
+  <h1>Content goes here</h1>
+{%endblock body%}
