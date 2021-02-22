@@ -36,7 +36,7 @@ async fn do_sign_up<'r>(pg: Postgres<'r>, form: Form<SignUp>) -> Result<String, 
         emails,
         format!("{}", hash),
     )
-    .execute(&pg)
+    .execute(pg)
     .await
     .map_err(|err| format!("{:#?}", err))?;
     Ok(format!("registration complete"))
@@ -73,7 +73,7 @@ async fn do_sign_in<'r>(pg: Postgres<'r>, form: Form<SignIn>) -> Result<String, 
         username,
         emails,
     )
-    .fetch_optional(&pg)
+    .fetch_optional(pg)
     .await
     .map_err(|err| format!("{:#?}", err))?;
     if let Some(user) = query_result {

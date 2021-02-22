@@ -7,7 +7,7 @@ use rocket::{
 };
 use sqlx::{postgres::PgConnectOptions, PgPool};
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Postgres<'r> {
     pool: &'r PgPool,
 }
@@ -28,7 +28,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Postgres<'r> {
     }
 }
 
-impl<'r, 'c> sqlx::Executor<'c> for &'_ Postgres<'r> {
+impl<'r, 'c> sqlx::Executor<'c> for Postgres<'r> {
     type Database = sqlx::Postgres;
 
     fn fetch_many<'e, 'q: 'e, E: 'q>(
