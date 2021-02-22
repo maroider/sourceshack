@@ -1,3 +1,4 @@
+use email_address::EmailAddress;
 use password_hash::{HasherError, PasswordHash, PasswordHasher, Salt, SaltString};
 use pbkdf2::Pbkdf2;
 use rand_core::OsRng;
@@ -8,7 +9,7 @@ use rocket::{
 };
 use rocket_contrib::templates::Template;
 
-use crate::{db::Postgres, util::tera_dummy_ctx};
+use crate::{db::Postgres, guards::AaudStr, util::tera_dummy_ctx};
 
 pub fn routes() -> Vec<Route> {
     routes![sign_up, do_sign_up, sign_in, do_sign_in]
@@ -21,6 +22,15 @@ fn sign_up() -> Template {
 
 #[post("/sign-up", data = "<form>")]
 async fn do_sign_up<'r>(pg: Postgres<'r>, form: Form<SignUp>) -> Result<String, String> {
+    match (
+        !AaudStr::is_valid(&form.username),
+        !EmailAddress::is_valid(&form.email),
+    ) {
+        (true, true) => return Err("Invalid username and email".to_string()),
+        (true, false) => return Err("Invalid username".to_string()),
+        (false, true) => return Err("Invalid email".to_string()),
+        (false, false) => {}
+    }
     let rng = OsRng::default();
     let salt = SaltString::generate(rng);
     let hash = hash_password(form.password.as_bytes(), salt.as_salt())

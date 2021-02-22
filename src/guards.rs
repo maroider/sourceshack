@@ -1,6 +1,9 @@
 use std::{ffi::OsStr, fmt, path::Path};
 
-use rocket::{http::RawStr, request::FromParam};
+use rocket::{
+    http::RawStr,
+    request::{FromFormValue, FromParam},
+};
 
 macro_rules! string_wrapper_impls {
     ($string_wrapper:ident $( < $( $lt:lifetime ),* $( , )? > )? , $field:ident ) => {
@@ -72,6 +75,23 @@ pub struct AaudStr<'a> {
     inner: &'a str,
 }
 
+impl<'a> AaudStr<'a> {
+    pub fn new(str: &'a str) -> Option<Self> {
+        if str
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || ['_', '-'].contains(&c))
+        {
+            Some(Self { inner: str })
+        } else {
+            None
+        }
+    }
+
+    pub fn is_valid(str: &'a str) -> bool {
+        Self::new(str).is_some()
+    }
+}
+
 impl<'a> FromParam<'a> for AaudStr<'a> {
     type Error = &'a RawStr;
 
@@ -80,13 +100,28 @@ impl<'a> FromParam<'a> for AaudStr<'a> {
         if string.is_empty() {
             return Err(param);
         }
-        if !string
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || ['_', '-'].contains(&c))
-        {
-            return Err(param);
+        if let Some(str) = Self::new(string) {
+            Ok(str)
+        } else {
+            Err(param)
         }
-        Ok(Self { inner: string })
+    }
+}
+
+impl<'a> FromFormValue<'a> for AaudStr<'a> {
+    type Error = &'a RawStr;
+
+    fn from_form_value(form_value: &'a RawStr) -> Result<Self, Self::Error> {
+        let string = form_value.as_str();
+        if let Some(str) = Self::new(string) {
+            Ok(str)
+        } else {
+            Err(form_value)
+        }
+    }
+
+    fn default() -> Option<Self> {
+        None
     }
 }
 

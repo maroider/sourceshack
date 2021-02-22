@@ -400,6 +400,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
+name = "email_address"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ff6ebb3a89eeb5d188c2e333dd857d2587907b99c4548b0686516a887c5ac7d"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1976,6 +1985,7 @@ dependencies = [
  "async-trait",
  "dotenv",
  "either",
+ "email_address",
  "env_logger",
  "flate2",
  "git2",
