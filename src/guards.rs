@@ -77,6 +77,9 @@ impl<'a> FromParam<'a> for AaudStr<'a> {
 
     fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
         let string = param.as_str();
+        if string.is_empty() {
+            return Err(param);
+        }
         if !string
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || ['_', '-'].contains(&c))
