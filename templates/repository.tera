@@ -9,7 +9,7 @@
 {% endblock head %}
 {%block body%}
   {{ header::header() }}
-  <h1>{{ owner }}/{{ name }}</h1>
+  <h1><a href="/~{{ owner }}">{{ owner }}</a>/{{ name }}</h1>
   <div class="files">
     <table>
       <tbody>

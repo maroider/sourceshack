@@ -25,6 +25,7 @@ async fn main() {
         .manage(config)
         .mount("/", routes::front_page::routes())
         .mount("/", routes::account::routes())
+        .mount("/", routes::user::routes())
         .mount("/", routes::vcs::git::web::routes())
         .mount("/", GitHttpBackend::new(data_dir.join("git_repos")))
         .mount("/static", StaticFiles::from("static").rank(-100))
